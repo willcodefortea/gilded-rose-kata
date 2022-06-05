@@ -3,12 +3,52 @@ export class Item {
   sellIn: number;
   quality: number;
 
-  constructor(name, sellIn, quality) {
+  constructor(name: string, sellIn: number, quality: number) {
     this.name = name;
     this.sellIn = sellIn;
     this.quality = quality;
   }
 }
+
+type UpdateQuality = (item: Item) => void;
+
+const addQuality = (item: Item, amount: number) => {
+  item.quality = Math.min(item.quality + amount, 50);
+  item.quality = Math.max(item.quality, 0);
+};
+
+const DEFAULT_STRATEGY = (item: Item) => {
+  item.sellIn = Math.max(0, item.sellIn - 1);
+  const qualityReduction = item.sellIn === 0 ? 2 : 1;
+  addQuality(item, qualityReduction * -1);
+};
+
+const QUALITY_STRATEGIES: { [key: string]: UpdateQuality } = {
+  "Aged Brie": (item) => {
+    addQuality(item, 2);
+  },
+  "Sulfuras, Hand of Ragnaros": () => {},
+  "Backstage passes to a TAFKAL80ETC concert": (item: Item) => {
+    let qualityIncrease: number;
+    if (item.sellIn > 10) {
+      qualityIncrease = 1;
+    } else if (item.sellIn > 5) {
+      qualityIncrease = 2;
+    } else {
+      qualityIncrease = 3;
+    }
+    addQuality(item, qualityIncrease);
+
+    item.sellIn = Math.max(0, item.sellIn - 1);
+    if (item.sellIn === 0) {
+      item.quality = 0;
+    }
+  },
+  Conjured: (item) => {
+    const qualityReduction = (item.sellIn === 0 ? 2 : 1) * 2;
+    addQuality(item, qualityReduction * -1);
+  },
+};
 
 export class GildedRose {
   items: Array<Item>;
@@ -18,59 +58,10 @@ export class GildedRose {
   }
 
   updateQuality() {
-    for (let i = 0; i < this.items.length; i++) {
-      if (
-        this.items[i].name != "Aged Brie" &&
-        this.items[i].name != "Backstage passes to a TAFKAL80ETC concert"
-      ) {
-        if (this.items[i].quality > 0) {
-          if (this.items[i].name != "Sulfuras, Hand of Ragnaros") {
-            this.items[i].quality = this.items[i].quality - 1;
-          }
-        }
-      } else {
-        if (this.items[i].quality < 50) {
-          this.items[i].quality = this.items[i].quality + 1;
-          if (
-            this.items[i].name == "Backstage passes to a TAFKAL80ETC concert"
-          ) {
-            if (this.items[i].sellIn < 11) {
-              if (this.items[i].quality < 50) {
-                this.items[i].quality = this.items[i].quality + 1;
-              }
-            }
-            if (this.items[i].sellIn < 6) {
-              if (this.items[i].quality < 50) {
-                this.items[i].quality = this.items[i].quality + 1;
-              }
-            }
-          }
-        }
-      }
-      if (this.items[i].name != "Sulfuras, Hand of Ragnaros") {
-        this.items[i].sellIn = this.items[i].sellIn - 1;
-      }
-      if (this.items[i].sellIn < 0) {
-        if (this.items[i].name != "Aged Brie") {
-          if (
-            this.items[i].name != "Backstage passes to a TAFKAL80ETC concert"
-          ) {
-            if (this.items[i].quality > 0) {
-              if (this.items[i].name != "Sulfuras, Hand of Ragnaros") {
-                this.items[i].quality = this.items[i].quality - 1;
-              }
-            }
-          } else {
-            this.items[i].quality =
-              this.items[i].quality - this.items[i].quality;
-          }
-        } else {
-          if (this.items[i].quality < 50) {
-            this.items[i].quality = this.items[i].quality + 1;
-          }
-        }
-      }
-    }
+    this.items.forEach((item) => {
+      const strategy = QUALITY_STRATEGIES[item.name] ?? DEFAULT_STRATEGY;
+      strategy(item);
+    });
 
     return this.items;
   }
